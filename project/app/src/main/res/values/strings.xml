@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">SensorBeacon3</string>
+    <string name="create_event">Create Event</string>
+    <string name="use_event">Use Event Code</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+</resources>
