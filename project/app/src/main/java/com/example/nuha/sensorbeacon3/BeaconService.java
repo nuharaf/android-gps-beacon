@@ -6,11 +6,13 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Binder;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -43,6 +45,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.preference.PreferenceManager;
 
@@ -71,11 +74,12 @@ public class BeaconService extends Service {
 
 
     LocalBroadcastManager bus;
+    Timer t;
 
 
     private final Binder mBinder = new LocalBinder();
 
-    Notification.Builder mBuilder;
+    NotificationCompat.Builder mBuilder;
 
     public BeaconService() {
     }
@@ -257,13 +261,16 @@ public class BeaconService extends Service {
     public void onDestroy() {
         Log.d(TAG, "onDestroy:  ");
         try {
-            mqttClient.disconnectForcibly();
+            mqttClient.disconnect(1000).waitForCompletion();
+            mqttClient.close();
         } catch (MqttException e) {
             e.printStackTrace();
             Log.d(TAG, "onDestroy:  Exception");
             return;
         }
         SERVICE_STATUS = SERVICE_NOT_RUNNING;
+        notificationManager.cancelAll();
+        t.cancel();
         Log.d(TAG, "onDestroy:  Success");
     }
 
@@ -275,15 +282,17 @@ public class BeaconService extends Service {
         Log.d(TAG, "onStartCommand: startId :  " + startId);
         Log.d(TAG,"SERVICE_STATUS flag : " + SERVICE_STATUS);
         pref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-        NotificationChannel channel = new NotificationChannel("app_default", "default", NotificationManager.IMPORTANCE_DEFAULT);
-        notificationManager = getSystemService(NotificationManager.class);
-        notificationManager.createNotificationChannel(channel);
+        notificationManager = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
+        if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel("app_default", "default", NotificationManager.IMPORTANCE_DEFAULT);
+            notificationManager.createNotificationChannel(channel);
+        }
 
         Intent notificationIntent = new Intent(this, MainActivity.class);
         notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
 
-        mBuilder = new Notification.Builder(this, "app_default")
+        mBuilder = new NotificationCompat.Builder(this, "app_default")
                 .setSmallIcon(R.drawable.sensorbeacon)
                 .setContentTitle("SensorBeacon")
                 .setContentText("Sencor beacon running")
@@ -305,7 +314,7 @@ public class BeaconService extends Service {
             } catch (MqttException e) {
                 e.printStackTrace();
             }
-            Timer t = new Timer();
+            t = new Timer();
             t.scheduleAtFixedRate(new TimerTask() {
                 @Override
                 public void run() {

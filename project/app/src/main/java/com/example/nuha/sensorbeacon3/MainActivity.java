@@ -11,6 +11,7 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 
 import android.os.IBinder;
@@ -229,7 +230,13 @@ public class MainActivity extends AppCompatActivity {
                         Intent i = new Intent(getApplicationContext(), BeaconService.class);
                         i.putExtra("clientId", eventcode + "-" + id);
                         i.putExtra("username", name);
-                        startForegroundService(i);
+                        if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            startForegroundService(i);
+                        }
+                        else{
+                            startService(i);
+                        }
+
                         finish();
                     } else {
                         MainActivity.this.runOnUiThread(() -> {
@@ -297,7 +304,12 @@ public class MainActivity extends AppCompatActivity {
                             Bundle param = new Bundle();
                             i.putExtra("clientId", event + "-" + id);
                             i.putExtra("username", name);
-                            startForegroundService(i);
+                            if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                startForegroundService(i);
+                            }
+                            else{
+                                startService(i);
+                            }
                             finish();
                         }
                         else{
