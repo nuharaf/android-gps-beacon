@@ -270,7 +270,7 @@ public class BeaconService extends Service {
         }
         SERVICE_STATUS = SERVICE_NOT_RUNNING;
         notificationManager.cancelAll();
-        t.cancel();
+        //t.cancel();
         Log.d(TAG, "onDestroy:  Success");
     }
 
@@ -314,20 +314,20 @@ public class BeaconService extends Service {
             } catch (MqttException e) {
                 e.printStackTrace();
             }
-            t = new Timer();
-            t.scheduleAtFixedRate(new TimerTask() {
-                @Override
-                public void run() {
-                    Log.d(TAG, "run: ");
-                    if(mqttClient.isConnected()){
-                        try {
-                            mqttClient.publish("greeting","{\"hello\" :\"world\"}".getBytes(),0,false);
-                        } catch (MqttException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }
-            },0,10000);
+//            t = new Timer();
+//            t.scheduleAtFixedRate(new TimerTask() {
+//                @Override
+//                public void run() {
+//                    Log.d(TAG, "run: ");
+//                    if(mqttClient.isConnected()){
+//                        try {
+//                            mqttClient.publish("greeting","{\"hello\" :\"world\"}".getBytes(),0,false);
+//                        } catch (MqttException e) {
+//                            e.printStackTrace();
+//                        }
+//                    }
+//                }
+//            },0,10000);
             startFusedLocation();
         },1000);
         SERVICE_STATUS = SERVICE_RUNNING;
