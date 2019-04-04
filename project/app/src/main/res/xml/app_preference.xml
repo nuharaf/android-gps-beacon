@@ -8,13 +8,13 @@
         android:selectAllOnFocus="true"
         android:singleLine="false"
         android:title="Edit API server address"
-        android:defaultValue="http://10.0.2.2:3000"/>
+        android:defaultValue="https://api.pirantiempuk.com/registration"/>
     <EditTextPreference
         android:key="mqtt_server"
         android:selectAllOnFocus="true"
         android:singleLine="false"
         android:title="Edit MQTT server address"
-        android:defaultValue="http://10.0.2.2:8888"/>
+        android:defaultValue="wss://api.pirantiempuk.com/device_conn"/>
 
 </androidx.preference.PreferenceScreen>
 
