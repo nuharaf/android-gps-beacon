@@ -8,13 +8,13 @@
         android:selectAllOnFocus="true"
         android:singleLine="false"
         android:title="Edit API server address"
-        android:defaultValue="https://api.pirantiempuk.com/registration"/>
+        android:defaultValue="https://api.gpsinstant.id/registration"/>
     <EditTextPreference
         android:key="mqtt_server"
         android:selectAllOnFocus="true"
         android:singleLine="false"
         android:title="Edit MQTT server address"
-        android:defaultValue="wss://api.pirantiempuk.com/device_conn"/>
+        android:defaultValue="wss://api.gpsinstant.id/device_conn"/>
 
 </androidx.preference.PreferenceScreen>
 
