@@ -57,6 +57,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         Log.d(TAG, "onCreate: MainActivity");
         setContentView(R.layout.activity_create_event);
         if (BeaconService.SERVICE_STATUS == BeaconService.SERVICE_RUNNING) {
@@ -65,6 +66,7 @@ public class MainActivity extends AppCompatActivity {
             startActivity(i);
         }
         pref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        PreferenceManager.setDefaultValues(getApplicationContext(),R.xml.app_preference,false);
         session = getSharedPreferences("session", 0);
         eventCode = findViewById(R.id.eventCode);
         assetName = findViewById(R.id.assetName);
