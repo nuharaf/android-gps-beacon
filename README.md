@@ -5,4 +5,8 @@ This application turn Android smartphone into GPS tracker. It send periodic loca
 
 For the server, you can use any mqtt broker that support websocket transport.
 
-![main](https://raw.githubusercontent.com/nuhamind2/android-gps-beacon/master/docs/image/main.jpg?s=100)
+![main](https://raw.githubusercontent.com/nuhamind2/android-gps-beacon/master/docs/image/main.jpg)
+
+
+
+![status](https://raw.githubusercontent.com/nuhamind2/android-gps-beacon/master/docs/image/status.jpg)
