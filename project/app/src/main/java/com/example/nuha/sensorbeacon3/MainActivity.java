@@ -344,6 +344,89 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public void onUseEventAPI19(View v){
+        Log.i(TAG, "OnUseEvent");
+        String event = eventCode.getText().toString();
+        if (event.contentEquals("")) {
+            eventCode.requestFocus();
+            return;
+        }
+        mProgress.setVisibility(View.VISIBLE);
+        createEvent.setEnabled(false);
+        useEvent.setEnabled(false);
+        try {
+            new Thread(() -> {
+                try {
+                    String api_server = pref.getString("api_server", "http://10.0.2.2:3000");
+                    URL url = new URL(api_server + "/checkEventCode/" + event);
+                    HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
+                    InputStream in = new BufferedInputStream(urlConnection.getInputStream());
+                    if(urlConnection.getResponseCode() == 200){
+                        Log.d(TAG, "onResponse: 200");
+                        MainActivity.this.runOnUiThread(() -> {
+                            mProgress.setVisibility(View.INVISIBLE);
+                            createEvent.setEnabled(true);
+                            useEvent.setEnabled(true);
+                        });
+                        String respon = readStream(in);
+                        if (respon.contentEquals("1")) {
+                            String id = Settings.Secure.getString(getApplicationContext().getContentResolver(),
+                                    Settings.Secure.ANDROID_ID);
+                            String name = assetName.getText().toString();
+                            name = name.contentEquals("") ? id : name;
+                            session.edit().putString("event", event).putString("name", name).commit();
+                            Intent i = new Intent(getApplicationContext(), BeaconService.class);
+                            Bundle param = new Bundle();
+                            i.putExtra("clientId", event + "-" + id);
+                            i.putExtra("username", name);
+                            if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                startForegroundService(i);
+                            } else {
+                                startService(i);
+                            }
+                            finish();
+                        }
+                        else {
+                            MainActivity.this.runOnUiThread(() -> {
+                                mProgress.setVisibility(View.INVISIBLE);
+                                createEvent.setEnabled(true);
+                                useEvent.setEnabled(true);
+                            });
+                            bus.sendBroadcast(new Intent("no-eventcode"));
+                        }
+                    }
+                    else {
+                        Log.d(TAG, "onFailure: ");
+                        MainActivity.this.runOnUiThread(() -> {
+                            mProgress.setVisibility(View.INVISIBLE);
+                            createEvent.setEnabled(true);
+                            useEvent.setEnabled(true);
+                            bus.sendBroadcast(new Intent("server-request-error"));
+                        });
+                    }
+                }
+                catch (MalformedURLException e){
+                    System.out.println(e);
+                }
+                catch (IOException e){
+                    Log.d(TAG, "onFailure: ");
+                    MainActivity.this.runOnUiThread(() -> {
+                        mProgress.setVisibility(View.INVISIBLE);
+                        createEvent.setEnabled(true);
+                        useEvent.setEnabled(true);
+                        bus.sendBroadcast(new Intent("server-request-error"));
+                    });
+                }
+            }).start();
+
+
+        }
+        catch (Exception e){
+            System.out.println(e);
+        }
+
+
+    }
 
     public void onUseEvent(View v) {
         Log.i(TAG, "OnUseEvent");
