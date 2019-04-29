@@ -1,7 +1,6 @@
 package com.example.nuha.sensorbeacon3;
 
 import android.Manifest;
-import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -31,7 +30,13 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.time.Instant;
 
 import androidx.constraintlayout.widget.ConstraintLayout;
@@ -66,7 +71,7 @@ public class MainActivity extends AppCompatActivity {
             startActivity(i);
         }
         pref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-        PreferenceManager.setDefaultValues(getApplicationContext(),R.xml.app_preference,false);
+        PreferenceManager.setDefaultValues(getApplicationContext(), R.xml.app_preference, false);
         session = getSharedPreferences("session", 0);
         eventCode = findViewById(R.id.eventCode);
         assetName = findViewById(R.id.assetName);
@@ -191,6 +196,87 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+    private String readStream(InputStream is) {
+        try {
+            ByteArrayOutputStream bo = new ByteArrayOutputStream();
+            int i = is.read();
+            while(i != -1) {
+                bo.write(i);
+                i = is.read();
+            }
+            return bo.toString();
+        } catch (IOException e) {
+            return "";
+        }
+    }
+
+    public void onCreateEventAPI19(View v) {
+        Log.i(TAG, "OnCreateEvent");
+        mProgress.setVisibility(View.VISIBLE);
+        createEvent.setEnabled(false);
+        useEvent.setEnabled(false);
+        try {
+            new Thread(() -> {
+                try {
+                    String api_server = pref.getString("api_server", "http://10.0.2.2:3000");
+                    URL url = new URL(api_server + "/newEventCode");
+                    HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
+                    InputStream in = new BufferedInputStream(urlConnection.getInputStream());
+                    if(urlConnection.getResponseCode() == 200){
+                        Log.d(TAG, "onResponse: 200");
+                        MainActivity.this.runOnUiThread(() -> {
+                            mProgress.setVisibility(View.INVISIBLE);
+                            createEvent.setEnabled(true);
+                            useEvent.setEnabled(true);
+                        });
+                        String eventcode = readStream(in);
+                        Log.d(TAG, "onResponse: created event code : " + eventcode);
+                        String id = Settings.Secure.getString(getApplicationContext().getContentResolver(),
+                                Settings.Secure.ANDROID_ID);
+                        String name = assetName.getText().toString();
+                        name = name.contentEquals("") ? id : name;
+                        session.edit().putString("event", eventcode).putString("name", name).commit();
+                        Intent i = new Intent(getApplicationContext(), BeaconService.class);
+                        i.putExtra("clientId", eventcode + "-" + id);
+                        i.putExtra("username", name);
+                        if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            startForegroundService(i);
+                        } else {
+                            startService(i);
+                        }
+                        finish();
+                    }
+                    else {
+                        MainActivity.this.runOnUiThread(() -> {
+                            mProgress.setVisibility(View.INVISIBLE);
+                            createEvent.setEnabled(true);
+                            useEvent.setEnabled(true);
+                        });
+                        bus.sendBroadcast(new Intent("server-request-error"));
+                    }
+                }
+                catch (MalformedURLException e){
+                    System.out.println(e);
+                }
+                catch (IOException e){
+                    Log.d(TAG, "onFailure: ");
+                    MainActivity.this.runOnUiThread(() -> {
+                        mProgress.setVisibility(View.INVISIBLE);
+                        createEvent.setEnabled(true);
+                        useEvent.setEnabled(true);
+                        bus.sendBroadcast(new Intent("server-request-error"));
+                    });
+                }
+            }).start();
+
+
+        }
+        catch (Exception e){
+            System.out.println(e);
+        }
+
+    }
+
     public void onCreateEvent(View v) {
         Log.i(TAG, "OnCreateEvent");
         mProgress.setVisibility(View.VISIBLE);
@@ -198,9 +284,9 @@ public class MainActivity extends AppCompatActivity {
         useEvent.setEnabled(false);
         OkHttpClient client = new OkHttpClient();
         try {
-            String api_server = pref.getString("api_server","http://10.0.2.2:3000");
+            String api_server = pref.getString("api_server", "http://10.0.2.2:3000");
             client.newCall(new Request.Builder()
-                    .url(api_server+  "/newEventCode")
+                    .url(api_server + "/newEventCode")
                     .build()).enqueue(new Callback() {
                 @Override
                 public void onFailure(Call call, IOException e) {
@@ -234,8 +320,7 @@ public class MainActivity extends AppCompatActivity {
                         i.putExtra("username", name);
                         if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                             startForegroundService(i);
-                        }
-                        else{
+                        } else {
                             startService(i);
                         }
 
@@ -272,7 +357,7 @@ public class MainActivity extends AppCompatActivity {
         useEvent.setEnabled(false);
         OkHttpClient client = new OkHttpClient();
         try {
-            String api_server = pref.getString("api_server","http://10.0.2.2:3000");
+            String api_server = pref.getString("api_server", "http://10.0.2.2:3000");
             client.newCall(new Request.Builder()
                     .url(api_server + "/checkEventCode/" + event)
                     .build()).enqueue(new Callback() {
@@ -308,14 +393,12 @@ public class MainActivity extends AppCompatActivity {
                             i.putExtra("username", name);
                             if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                                 startForegroundService(i);
-                            }
-                            else{
+                            } else {
                                 startService(i);
                             }
                             finish();
-                        }
-                        else{
-                            MainActivity.this.runOnUiThread(()->{
+                        } else {
+                            MainActivity.this.runOnUiThread(() -> {
                                 stopProgressBar();
                                 createEvent.setEnabled(true);
                                 useEvent.setEnabled(true);

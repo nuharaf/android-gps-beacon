@@ -11,6 +11,8 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
@@ -46,6 +48,7 @@ import java.util.TimerTask;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
+//import android.support.v4.app.NotificationCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.preference.PreferenceManager;
 
@@ -71,6 +74,8 @@ public class BeaconService extends Service {
     MqttConnectOptions mqttConnectOptions;
     FusedLocationProviderClient mFusedLocationClient;
     Location mCurrentLocation;
+
+    LocationManager mLocationManager;
 
 
     LocalBroadcastManager bus;
@@ -196,6 +201,67 @@ public class BeaconService extends Service {
         }
     };
 
+    LocationListener locationListener = new LocationListener() {
+        @Override
+        public void onLocationChanged(Location location) {
+            Log.d(TAG, "onLocationChanged: ");
+            final JSONObject loc = new JSONObject();
+            mCurrentLocation = location;
+            String topic = "gps";
+            try {
+                loc.put("lat", mCurrentLocation.getLatitude());
+                loc.put("lon", mCurrentLocation.getLongitude());
+                loc.put("ele", mCurrentLocation.getAltitude());
+                loc.put("time", mCurrentLocation.getTime());
+                loc.put("accuracy", mCurrentLocation.getAccuracy());
+                loc.put("speed", mCurrentLocation.getSpeed());
+                loc.put("src", mCurrentLocation.getProvider());
+                Intent i = new Intent("location-update");
+                i.putExtra("latitude",mCurrentLocation.getLatitude());
+                i.putExtra("longitude",mCurrentLocation.getLongitude());
+                i.putExtra("altitude",mCurrentLocation.getAltitude());
+                i.putExtra("time",mCurrentLocation.getTime());
+                i.putExtra("speed",mCurrentLocation.getSpeed());
+                i.putExtra("accuracy",mCurrentLocation.getAccuracy());
+                i.putExtra("provider",mCurrentLocation.getProvider());
+                bus.sendBroadcast(i);
+                if (mqttClient.isConnected()) {
+                    try {
+                        mqttClient.publish(topic, loc.toString().getBytes(), 0, false);
+                    } catch (MqttException e) {
+                        e.printStackTrace();
+                    }
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+
+        @Override
+        public void onStatusChanged(String provider, int status, Bundle extras) {
+            Log.d(TAG, "onStatusChanged: " + provider + status);
+        }
+
+        @Override
+        public void onProviderEnabled(String provider) {
+            Log.d(TAG, "onProviderEnabled: " + provider);
+        }
+
+        @Override
+        public void onProviderDisabled(String provider) {
+            Log.d(TAG, "onProviderDisabled: " + provider);
+        }
+    };
+
+    public int startAndroidLocation(){
+        mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            Log.v(TAG, "ACCESS_FINE_LOCATION permission not granted");
+            return 1;
+        }
+        mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,1000,1,locationListener);
+        return 1;
+    }
 
     public int startFusedLocation() {
         LocationRequest mLocationRequest;
@@ -299,7 +365,9 @@ public class BeaconService extends Service {
                 .setContentIntent(pendingIntent).setAutoCancel(true);
         startForeground(1, mBuilder.build());
 
-        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        if (android.os.Build.VERSION.SDK_INT != Build.VERSION_CODES.KITKAT) {
+            mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        }
 
 //        mainhandler.postDelayed(()->{
 //            mBuilder.setContentText("ulala");
@@ -328,7 +396,13 @@ public class BeaconService extends Service {
 //                    }
 //                }
 //            },0,10000);
-            startFusedLocation();
+            if (android.os.Build.VERSION.SDK_INT != Build.VERSION_CODES.KITKAT) {
+                startFusedLocation();
+            }
+            else{
+                startAndroidLocation();
+            }
+
         },1000);
         SERVICE_STATUS = SERVICE_RUNNING;
         bus = LocalBroadcastManager.getInstance(getApplicationContext());
